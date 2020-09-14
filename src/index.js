@@ -1,9 +1,78 @@
-import fetch from 'node-fetch';
+const compose = (...fns) =>
+    (arg) =>
+        fns.reduce(
+            (composed, f) => f(composed),
+            arg
+        )
 
-console.log('It works!')
+const oneSecond = () => 1000
+const getCurrentTime = () => new Date()
+const clear = () => console.clear()
+const log = message => console.log(message)
 
-console.log('Just change the name of index.js for your script and you are ready to use the latest es6 features.')
+const serializeClockTime = date =>
+({
+    hours: date.getHours(),
+    minutes: date.getMinutes(),
+    seconds: date.getSeconds()
+})
 
-fetch('https://postman-echo.com/get?foo1=bar1&foo2=bar2', { method: 'GET'})
-    .then(res => res.json()) // expecting a json response
-    .then(json => console.log(json));
+const civilianHours = clockTime =>
+({
+    ...clockTime,
+    hours: (clockTime.hours > 12) ? 
+    clockTime.hours - 12 : 
+    clockTime.hours
+})
+
+const appendAMPM = clockTime =>
+({
+    ...clockTime,
+    ampm: (clockTime.hours >= 12) ? "PM" : "AM"
+})
+
+const display = target => time => target(time)
+
+const formatClock = format =>
+    time =>
+        format.replace("hh", time.hours)
+              .replace("mm", time.minutes)
+              .replace("ss", time.seconds)
+              .replace("tt", time.ampm)
+
+const prependZero = key => clockTime =>
+({
+    ...clockTime,
+    [key]: (clockTime[key] < 10) ? 
+        "0" + clockTime[key] : 
+        clockTime[key]
+})
+
+const convertToCivilianTime = clockTime =>
+    compose(
+        appendAMPM,
+        civilianHours
+    )(clockTime)
+
+const doubleDigits = civilianTime =>
+    compose(
+        prependZero("hours"),
+        prependZero("minutes"),
+        prependZero("seconds")
+    )(civilianTime)
+
+const startTicking = () =>
+    setInterval(
+        compose(
+            clear,
+            getCurrentTime,
+            serializeClockTime,
+            convertToCivilianTime,
+            doubleDigits,
+            formatClock("hh:mm:ss tt"),
+            display(log)
+        ),
+        oneSecond()
+    )
+
+startTicking()
